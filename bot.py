@@ -121,7 +121,7 @@ def reply(real_time_message):
         logger.info('\nReceived Message: ' + message_content)
 
         # Build WA converse POST request
-        url = settings.WA_URL + "/v2/api/converse/skillSet/" + settings.WA_COLLECTION + "?api_key=" + settings.WA_API_KEY
+        url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_COLLECTION + "/converse?api_key=" + settings.WA_API_KEY
         headers = {'Content-Type': 'application/json'}
 
         # Build the JSON body to send to WA converse endpoint
