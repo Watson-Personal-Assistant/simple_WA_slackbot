@@ -39,10 +39,6 @@ class TestEnvFile(TestCase):
         # Ensure Device Type Exists
         self.assertIsNotNone(settings.WA_DEVICE_TYPE)
 
-    def test_fallback_variables(self):
-        # Ensure Fallback Responses String Exists
-        self.assertIsNotNone(settings.FALLBACK_RESPONSES)
-
     def test_bot_config_variables(self):
         # Ensure Fallback Responses String Exists
         self.assertIsNotNone(settings.MAX_CARD_CHARACTERS)
