@@ -1,0 +1,15 @@
+{
+  "token": "...",
+  "team": {
+    "id": "...",
+    "name": "..."
+  },
+  "bot": {
+    "id": "..."
+  },
+  "message": {
+    "type": "message",
+    "channel": "...",
+    "text": "..."
+  }
+}
