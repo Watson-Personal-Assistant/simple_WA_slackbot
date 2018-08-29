@@ -1,21 +1,29 @@
- #
- # Copyright 2017 IBM Corp. All Rights Reserved.
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #      http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
- #
 import os
+import json
+import logging
 from dotenv import load_dotenv
 from os.path import join, dirname
+
+
+def set_log_level(logger_level):
+    logging.getLogger().setLevel(logger_level)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logger_level)
+
+    # create formatter
+    formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - \n%(message)s')
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logging.getLogger().addHandler(ch)
+
+
+# Configure Logging Default
+set_log_level(logging.INFO)
 
 # If on bluemix load env differently
 # Load Environment variables set via VCAP variables in Bluemix
@@ -32,6 +40,63 @@ else:
     # Load .env file into os.environ
     load_dotenv(env_path)
 
+# ===================
+# Logging Settings
+# ===================
+try:
+    # API Key for bot analytics
+    LOG_LEVEL = os.environ.get("LOG_LEVEL").upper()
+    log_level_str = LOG_LEVEL
+
+    if LOG_LEVEL == 'INFO':
+        LOG_LEVEL = logging.INFO
+    elif LOG_LEVEL == 'DEBUG':
+        LOG_LEVEL = logging.DEBUG
+    elif LOG_LEVEL == 'WARNING':
+        LOG_LEVEL = logging.WARNING
+    elif LOG_LEVEL == 'ERROR':
+        LOG_LEVEL = logging.ERROR
+    else:
+        LOG_LEVEL = logging.WARNING
+
+    logging.info("Logging Set To: " + log_level_str)
+
+    if LOG_LEVEL != logging.WARNING:
+        set_log_level(LOG_LEVEL)
+except Exception as ex:
+    template = 'Error: {0} Problem reading Logging Level string from environment variables. Logging set to WARNING LEVEL. Arguments: \n{1!r}'
+    message = template.format(type(ex).__name__, ex.args)
+    ANALYTICS_ENABLED = False
+    logging.warning(message)
+
+
+# ===================
+# Analytics Settings
+# ===================
+try:
+    # API Key for bot analytics
+    ANALYTICS_ENABLED = (os.environ.get("ANALYTICS_ENABLED").upper() == 'TRUE')
+    logging.info("Analytics Enabled: " + str(ANALYTICS_ENABLED))
+except Exception as ex:
+    template = 'Error: {0} Problem reading ANALYTICS_ENABLED boolean from environment variables. Analytics posting is disabled. Arguments: \n{1!r}'
+    message = template.format(type(ex).__name__, ex.args)
+    ANALYTICS_ENABLED = False
+    logging.warning(message)
+
+if ANALYTICS_ENABLED:
+    try:
+        ANALYTICS_API_KEY = os.environ.get("ANALYTICS_API_KEY")
+        ANALYTICS_INPUT_URL = os.environ.get("ANALYTICS_INPUT_URL")
+        ANALYTICS_RESPONSE_URL = os.environ.get("ANALYTICS_RESPONSE_URL")
+    except Exception as ex:
+        template = 'Error: {0} Problem reading ANALYTICS credentials or urls from environment variables. Analytics posting is disabled. Arguments: \n{1!r}'
+        message = template.format(type(ex).__name__, ex.args)
+        ANALYTICS_ENABLED = False
+        logging.error(message)
+
+# =======================================
+# Slack & Watson Assistant Credentials
+# =======================================
 try:
     # Slack Credentials
     SLACK_API_TOKEN = os.environ.get("SLACK_API_TOKEN")
@@ -39,12 +104,20 @@ try:
 
     # WA Credentials
     WA_URL = os.environ.get("WA_URL")
-    WA_COLLECTION = os.environ.get("WA_COLLECTION")
+    WA_SKILLSET = os.environ.get("WA_SKILLSET")
     WA_API_KEY = os.environ.get("WA_API_KEY")
-    WA_USER_ID = os.environ.get("WA_USER_ID")
     WA_LANGUAGE = os.environ.get("WA_LANGUAGE")
+    WA_DEVICE_TYPE = os.environ.get("WA_DEVICE_TYPE")
+
+    if os.environ.get("WA_CLIENT_ID"):
+        WA_CLIENT_ID = os.environ.get("WA_DEVICE_TYPE")
+    else:
+        WA_CLIENT_ID = 'slackbot'
 
     FALLBACK_RESPONSES = os.environ.get("FALLBACK_RESPONSES")
+
+    # Bot Configuration Settings
+    MAX_CARD_CHARACTERS = os.environ.get("MAX_CARD_CHARACTERS")
 
     print("Environment Variables Loaded Successfully")
 
@@ -54,4 +127,35 @@ except Exception as ex:
     message = template.format(type(ex).__name__, ex.args)
     print(message)
 
+# ========================
+# Message Cache Settings
+# ========================
+try:
+    # Upper Limit for Cache Size for tuple references of bot replies to user messages
+    MAX_MESSAGE_CACHE = int(os.environ.get('MAX_MESSAGE_CACHE'))
+except Exception as ex:
+    template = 'Error: {0} Problem reading Max Message Cache Size Integer from environment variables. MAX_MESSAGE_CACHE was set to 1000. Arguments: \n{1!r}'
+    message = template.format(type(ex).__name__, ex.args)
+    ANALYTICS_ENABLED = False
+    logging.warning(message)
 
+
+# ==================
+# Load JSON Files
+# ==================
+
+# Set Context from context.json file
+try:
+    with open('context.json') as json_file:
+        CONTEXT = json.load(json_file)
+
+    with open('analytics_bot_response.json') as json_file:
+        ANALYTICS_BOT_RESPONSE_JSON = json.load(json_file)
+
+    with open('analytics_user_message.json') as json_file:
+        ANALYTICS_USER_MESSAGE_JSON = json.load(json_file)
+
+except Exception as ex:
+    template = "Couldn't read .json file. An exception of type {0} occurred. Arguments:\n{1!r}"
+    message = template.format(type(ex).__name__, ex.args)
+    logging.warning(message)
