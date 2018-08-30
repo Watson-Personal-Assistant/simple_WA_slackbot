@@ -27,18 +27,14 @@ set_log_level(logging.INFO)
 
 # If on bluemix load env differently
 # Load Environment variables set via VCAP variables in Bluemix
-if 'VCAP_SERVICES' in os.environ:
-    print("On Bluemix...")
+#if 'VCAP_SERVICES' in os.environ:
+    # print("On Bluemix...")
 
-# Load Environment Variables in a sane non Bluemix way
-else:
-    print("Not On Bluemix...")
+# Check for existance of .env file
+env_path = join(dirname(__file__), '.env')
 
-    # Check for existance of .env file
-    env_path = join(dirname(__file__), '.env')
-
-    # Load .env file into os.environ
-    load_dotenv(env_path)
+# Load .env file into os.environ
+load_dotenv(env_path)
 
 # ===================
 # Logging Settings
@@ -100,7 +96,7 @@ if ANALYTICS_ENABLED:
 try:
     # Slack Credentials
     SLACK_API_TOKEN = os.environ.get("SLACK_API_TOKEN")
-    BOT_ID = os.environ.get("BOT_ID")
+    BOT_NAME = os.environ.get("BOT_NAME")
 
     # WA Credentials
     WA_URL = os.environ.get("WA_URL")

@@ -1,3 +1,4 @@
+'''
 from unittest import TestCase
 from os.path import join, dirname
 import settings
@@ -21,7 +22,7 @@ class TestEnvFile(TestCase):
         self.assertIsNotNone(settings.SLACK_API_TOKEN)
 
         # Does the bot id/name exist?
-        self.assertIsNotNone(settings.BOT_ID)
+        self.assertIsNotNone(settings.BOT_NAME)
 
     def test_WA_variables(self):
         # Ensure URL Exists
@@ -43,3 +44,4 @@ class TestEnvFile(TestCase):
         # Ensure Fallback Responses String Exists
         self.assertIsNotNone(settings.MAX_CARD_CHARACTERS)
         self.assertTrue(0 <= int(settings.MAX_CARD_CHARACTERS) <= 9999999999)
+'''

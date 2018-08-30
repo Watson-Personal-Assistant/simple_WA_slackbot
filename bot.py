@@ -20,7 +20,7 @@ slack_token = settings.SLACK_API_TOKEN
 slack_client = SlackClient(slack_token)
 
 # Bot's ID as an environment variable
-BOT_ID = settings.BOT_ID
+BOT_NAME = settings.BOT_NAME
 BOT_USER_ID = slack_client.api_call('auth.test')['user_id']
 AT_BOT = "<@" + BOT_USER_ID + ">"
 
@@ -296,7 +296,7 @@ def analytics_user_input(message, username, channel, event_ts, team, intent, ent
     data['team']['id'] = team
     data['team']['name'] = TEAM_NAME
 
-    data['bot']['id'] = settings.BOT_ID
+    data['bot']['id'] = settings.BOT_NAME
 
     data['message']['type'] = 'message'
     data['message']['channel'] = channel
@@ -340,7 +340,7 @@ def analytics_bot_response(message_response, channel, team, team_name):
     data['team']['id'] = team
     data['team']['name'] = team_name
 
-    data['bot']['id'] = settings.BOT_ID
+    data['bot']['id'] = settings.BOT_NAME
 
     data['message']['type'] = 'message'
     data['message']['channel'] = channel

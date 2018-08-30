@@ -3,8 +3,9 @@
 
 ### Description
 A Python Application for a slackbot that routes text requests and gets responses from Watson Personal Assistant
+A Python Application for a slackbot that routes text requests and gets responses from Watson Assistant Assistant Solutions.
 
-[![License](https://img.shields.io/badge/license-APACHE2-blue.svg)]() [![Python](https://img.shields.io/badge/Python-3.7.0-yellow.svg)]() [![Version](https://img.shields.io/badge/Version-3.1.2-green.svg)]()
+[![Build Status](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot.svg?token=zZTqm68ChrVG6ms39mnF&branch=master)](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot) [![License](https://img.shields.io/badge/license-APACHE2-blue.svg)]() [![Python](https://img.shields.io/badge/Python-3.6.2-yellow.svg)]() [![Version](https://img.shields.io/badge/Version-3.1.3-green.svg)]()
 
 ---
 
@@ -16,6 +17,18 @@ A Python Application for a slackbot that routes text requests and gets responses
 * slackclient>=1.2.1
 
 ---
+
+### Getting Your Slack Key
+
+1. Go to https://YOUR_SLACK.slack.com/
+2. Click on __Configure Apps__ on the left side bar
+3. Click on __Custom Integrations__ under the __Manage__ sidebar
+4. Click on __Bots__
+5. Click on the __Add Configuration__ button
+6. Give your bot a unique __username__ (Save this info)
+7. Save the __API Token__, you'll need it for your environment variables later
+8. You're all set
+
 
 ### Notes on configuration
 When running the application you'll need to ensure you have your .env file setup in the root folder.  Credential configuration files should be kept private.
@@ -32,7 +45,7 @@ LOG_LEVEL="WARNING"
 
 # Slack Credentials
 SLACK_API_TOKEN=""
-BOT_ID=""
+BOT_NAME=""
 
 # WA Credentials
 WA_URL="https://watson-personal-assistant-toolkit.mybluemix.net"
@@ -85,16 +98,7 @@ Once your app is running you should be good to go. You can message your bot dire
 ### To Run on Bluemix
 
 ```
-cf push $YOUR_APP_NAME_HERE --no-route true --health-check-type process
-```
-
-You'll need to add VCAP environment variables, you can do this in three different ways, documented [here](https://console.ng.bluemix.net/docs/manageapps/depapps.html#ud_env):
-[https://console.ng.bluemix.net/docs/manageapps/depapps.html#ud_env](https://console.ng.bluemix.net/docs/manageapps/depapps.html#ud_env)
-
-Once your environment variables are set, you'll need to re-stage the application which you can do through the Bluemix UI or from the command line by running...
-
-```
-cf restage $YOUR_APP_NAME
+cf push $YOUR_APP_NAME_HERE --no-route true --health-check-type process -m 256M
 ```
 
 Once your app is finished staging you should be good to go. You can message your bot directly on slack, or you can invite him to a channel and @botname {text goes here} to use it.

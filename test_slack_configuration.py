@@ -11,7 +11,7 @@ class TestSlackConfiguration(TestCase):
         self.assertIsNotNone(settings.SLACK_API_TOKEN)
 
         # Does the bot id/name exist?
-        self.assertIsNotNone(settings.BOT_ID)
+        self.assertIsNotNone(settings.BOT_NAME)
 
         # Test API
         key = settings.SLACK_API_TOKEN
