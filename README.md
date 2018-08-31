@@ -19,14 +19,13 @@ A Python Application for a slackbot that routes text requests and gets responses
 
 ### Getting Your Slack Key
 
-1. Go to https://YOUR_SLACK.slack.com/
-2. Click on __Configure Apps__ on the left side bar
-3. Click on __Custom Integrations__ under the __Manage__ sidebar
-4. Click on __Bots__
-5. Click on the __Add Configuration__ button
-6. Give your bot a unique __username__ (Save this info)
-7. Save the __API Token__, you'll need it for your environment variables later
-8. You're all set
+1. Go to [https://YOUR_SLACK.slack.com/apps/manage](https://YOUR_SLACK.slack.com/apps/manage)
+2. In the **Search App Directory** field at the top, type `Bots`
+3. Click on **Bots**
+4. Click on the **Add Configuration** button
+5. Give your bot a unique username (Save this info)
+6. Save the **API Token**
+7. You will use these variables when creating your .env file as instructed in the below steps
 
 
 ### Notes on configuration
@@ -35,6 +34,18 @@ When running the application you'll need to ensure you have your .env file setup
 The application looks for configuration in:
 ```
 /.env
+```
+
+To get started quickly just copy the sample to .env and edit from there
+
+**Mac/Linux**
+```
+cp .env.sample .env
+```
+
+**Windows**
+```
+xcopy .env.sample .env
 ```
 
 The .env file should look like the code block below, with your own valid keys added you can reference /.env.sample
@@ -66,13 +77,7 @@ ANALYTICS_RESPONSE_URL="https://tracker.dashbot.io/track?platform=slack&v=9.8.0-
 MAX_MESSAGE_CACHE=1000
 ```
 
-To get started quickly just copy the sample to .env and edit from there
-
-```
-cp .env.sample .env
-```
-
-For help getting a slack API token please reference their documentation [here](https://get.slack.help/hc/en-us/articles/215770388-Create-and-regenerate-API-tokens).
+For help getting a slack API token if you weren't able to via the initial steps please reference their documentation [here](https://get.slack.help/hc/en-us/articles/215770388-Create-and-regenerate-API-tokens).
 
 ### To Run Locally
 
@@ -98,6 +103,12 @@ Once your app is running you should be good to go. You can message your bot dire
 
 ```
 cf push $YOUR_APP_NAME_HERE --no-route true --health-check-type process -m 256M
+```
+
+or potentially... (depending on your CLI tools)
+
+```
+bx cf push $YOUR_APP_NAME_HERE --no-route true --health-check-type process -m 256M
 ```
 
 Once your app is finished staging you should be good to go. You can message your bot directly on slack, or you can invite him to a channel and @botname {text goes here} to use it.
