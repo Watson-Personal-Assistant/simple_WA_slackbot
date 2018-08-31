@@ -2,20 +2,31 @@
 
 
 ### Description
-A Python Application for a slackbot that routes text requests and gets responses from Watson Assistant
+A Python Application for a slackbot that routes text requests and gets responses from Watson Assistant Solutions.
 
-[![License](https://img.shields.io/badge/license-APACHE2-blue.svg)]() [![Python](https://img.shields.io/badge/Python-3.6.2-yellow.svg)]()
+[![Build Status](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot.svg?token=zZTqm68ChrVG6ms39mnF&branch=master)](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot) [![License](https://img.shields.io/badge/license-APACHE2-blue.svg)]() [![Python](https://img.shields.io/badge/Python-3.6.2-yellow.svg)]() [![Version](https://img.shields.io/badge/Version-3.1.3-green.svg)]()
 
 ---
 
 ### Requirements:
 
-* sys
-* requests
-* python-dotenv
-* slackclient
+* websocket-client==0.47.0
+* python-dotenv>=0.9.1
+* requests>=2.19.1
+* slackclient>=1.2.1
 
 ---
+
+### Getting Your Slack Key
+
+1. Go to [https://YOUR_SLACK.slack.com/apps/manage](https://YOUR_SLACK.slack.com/apps/manage)
+2. In the **Search App Directory** field at the top, type `Bots`
+3. Click on **Bots**
+4. Click on the **Add Configuration** button
+5. Give your bot a unique username (Save this info)
+6. Save the **API Token**
+7. You will use these variables when creating your .env file as instructed in the below steps
+
 
 ### Notes on configuration
 When running the application you'll need to ensure you have your .env file setup in the root folder.  Credential configuration files should be kept private.
@@ -25,30 +36,48 @@ The application looks for configuration in:
 /.env
 ```
 
-The .env file should look like the code block below, with your own valid keys added you can reference /.env.sample
-```
-# Slack Credentials
-SLACK_API_TOKEN="REPLACE"
-BOT_ID="REPLACE"
-
-# WA Credentials
-WA_URL="https://watson-personal-assistant-toolkit.mybluemix.net"
-WA_COLLECTION="REPLACE"
-WA_API_KEY="REPLACE"
-WA_USER_ID="CanBeAnything"
-WA_LANGUAGE="en-US"
-
-# Fallback Phrases, Comma separated. OPTIONAL (Leave as empty string if undesired)
-FALLBACK_RESPONSES="I didn't quite catch that, I don't understand"
-```
-
 To get started quickly just copy the sample to .env and edit from there
 
+**Mac/Linux**
 ```
 cp .env.sample .env
 ```
 
-For help setting up a custom bot user to get the BOT_ID and SLACK_API_TOKEN, go to Slack's documentation on [Bot Users](https://api.slack.com/custom-integrations/bot-users) and click the link `creating a new bot user` in the **Custom bot users** paragraph.
+**Windows**
+```
+xcopy .env.sample .env
+```
+
+The .env file should look like the code block below, with your own valid keys added you can reference /.env.sample
+```
+# Log Level (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL="WARNING"
+
+# Slack Credentials
+SLACK_API_TOKEN=""
+BOT_NAME=""
+
+# WA Credentials
+WA_URL="https://watson-personal-assistant-toolkit.mybluemix.net"
+WA_SKILLSET=""
+WA_API_KEY=""
+WA_LANGUAGE="en-US"
+WA_DEVICE_TYPE="slackbot"
+
+# Bot Configuration - Number of characters before card data is made into a JSON snippit
+MAX_CARD_CHARACTERS=1500
+
+# Configurations for bot analytic services (OPTIONAL)
+ANALYTICS_ENABLED="FALSE"
+ANALYTICS_API_KEY=""
+ANALYTICS_INPUT_URL="https://tracker.dashbot.io/track?platform=slack&v=9.8.0-rest&type=incoming&apiKey="
+ANALYTICS_RESPONSE_URL="https://tracker.dashbot.io/track?platform=slack&v=9.8.0-rest&type=outgoing&apiKey="
+
+# Max Message Pointer Cache Size
+MAX_MESSAGE_CACHE=1000
+```
+
+For help getting a slack API token if you weren't able to via the initial steps please reference their documentation [here](https://get.slack.help/hc/en-us/articles/215770388-Create-and-regenerate-API-tokens).
 
 ### To Run Locally
 
@@ -72,27 +101,14 @@ Once your app is running you should be good to go. You can message your bot dire
 
 ### To Run on Bluemix
 
-Get the [IBM Bluemix CLI](https://console.bluemix.net/docs/cli/index.html#cli).
-
-Then login, using the command:
-
 ```
-bx login --sso
+cf push $YOUR_APP_NAME_HERE --no-route true --health-check-type process -m 256M
 ```
 
-Push and run the code on Bluemix (replace $YOUR_APP_NAME_HERE with anything you want as this will be used as the part of the URL to your Bluemix app).
+or potentially... (depending on your CLI tools)
 
 ```
-bx cf push $YOUR_APP_NAME_HERE --no-route true --health-check-type process
-```
-
-You'll need to add VCAP environment variables, you can do this in three different ways, documented [here](https://console.ng.bluemix.net/docs/manageapps/depapps.html#ud_env):
-[https://console.ng.bluemix.net/docs/manageapps/depapps.html#ud_env](https://console.ng.bluemix.net/docs/manageapps/depapps.html#ud_env)
-
-Once your environment variables are set, you'll need to re-stage the application which you can do through the Bluemix UI or from the command line by running...
-
-```
-bx cf restage $YOUR_APP_NAME
+bx cf push $YOUR_APP_NAME_HERE --no-route true --health-check-type process -m 256M
 ```
 
 Once your app is finished staging you should be good to go. You can message your bot directly on slack, or you can invite him to a channel and @botname {text goes here} to use it.
@@ -122,15 +138,13 @@ python3 -m unittest test.test_env_file
 
 All chat logs are stored in the /slackbot.log file, mostly consisting of user utterances, responses, and slack logging.
 
-## Unrecognized intent logging
+## Analytics
 
-Any response from WA that comes back with a fallback response (Defined in environment variables) or with no response will be written to the /fallback_responses.csv file
+Slackbot has built in hooks for enabling analytics, such as dashbot.io, by setting `ANALYTICS_ENABLED` to TRUE and adding in your dashbot.io API Key you can start easily start posting to the service
 
-To enable this feature please ensure that in your .env variables (local) or in your VCAP environment variables (bluemix) you add comma separated responses that come from your fallback skill.
+Refer to the .env.sample if needed.
 
-You can find it in the .env.sample file
 
-```
-# Fallback Phrases, Comma separated. OPTIONAL (Leave as empty string if undesired)
-FALLBACK_RESPONSES="I didn't quite catch that, I don't understand"
-```
+# Context
+
+The slackbot also has the option to send up context as JSON. You can find this in the `context.json` file in the root directory. The file **must be** valid JSON and will be sent as part of the body to WA. This is useful for one your skills/skillSets require context such as location with a lat long.
