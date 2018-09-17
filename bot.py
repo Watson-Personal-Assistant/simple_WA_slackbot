@@ -8,22 +8,34 @@ import settings
 import multiprocessing
 from enum import Enum
 from datetime import datetime
+from watson_developer_cloud import DiscoveryV1
+from watson_developer_cloud import VisualRecognitionV3
+import requests
+import os
 from slackclient import SlackClient
+
+# ====================
+# Discovery service settings
+# ====================
+COLLECTION_ID = settings.COLLECTION_ID
+CONFIGURATION_ID = settings.CONFIGURATION_ID
+ENVIRONMENT_ID = settings.ENVIRONMENT_ID
+DS_USERNAME = settings.DS_USERNAME
+DS_PASSWORD = settings.DS_PASSWORD
 
 # ====================
 # SLACK CLIENT CONFIG
 # ====================
-
 slack_token = settings.SLACK_API_TOKEN
 
 # Instantiate Slack client
 slack_client = SlackClient(slack_token)
+BOT_USER_ID = slack_client.api_call('auth.test')['user_id']
+logging.debug('BOT_USER_ID %s ' + str(BOT_USER_ID))
 
 # Bot's ID as an environment variable
 BOT_NAME = settings.BOT_NAME
-BOT_USER_ID = slack_client.api_call('auth.test')['user_id']
 AT_BOT = "<@" + BOT_USER_ID + ">"
-
 TEAM_INFO = slack_client.api_call('team.info').get('team')
 TEAM_NAME = TEAM_INFO['name']
 TEAM_ID = TEAM_INFO['id']
@@ -44,6 +56,151 @@ class Channel(Enum):
 MAX_CARD_CHARACTERS = settings.MAX_CARD_CHARACTERS
 MAX_MESSAGE_CACHE = settings.MAX_MESSAGE_CACHE
 
+def read_img_file(doc_url):
+    # creating a Visual Recognition  Service instance
+    instance = VisualRecognitionV3(api_key='paste your api _key here', version='2016-05-20')
+
+    # select an image (local or url) with text in it. Recognizing text:
+    img = instance.recognize_text(images_url=doc_url)
+    text_read = img['images'][0]['text']
+    logging.debug( 'Read text %s ' %text_read  )
+    return(text_read)
+
+def read_pdf(doc_url, doc_name):
+
+    # Get the pdf from Slack
+    #r = requests.get(doc_url, file_name) # create HTTP response object
+    r = requests.get(doc_url, headers={'Authorization': 'Bearer {}'.format(slack_token) })
+    # logging.debug("read_pdf content %s " %r.content )
+    # send a HTTP request to the server and save
+    # the HTTP response in a response object called r
+    # save the file python_logo.png
+    with open(doc_name, 'wb' ) as f:
+        f.write(r.content)
+
+    #logging.debug("read_pdf text %s " %r.text )
+    logging.debug("read_pdf headers %s " %r.headers )
+    logging.debug("read_pdf content-type %s " %r.headers['content-type'] )
+
+    # creating a Discovery instance
+    logging.debug( 'Adding Doc to Discovery Service' )
+    discovery = DiscoveryV1(
+      username=DS_USERNAME,
+      password=DS_PASSWORD,
+      version="2017-10-16"
+    )
+
+    # Put pdf document in Discovery instance
+    with open(os.path.join(os.getcwd(), '.', doc_name )) as fileinfo:
+        add_doc = discovery.add_document(ENVIRONMENT_ID, COLLECTION_ID, file_info=fileinfo)
+
+    logging.debug(json.dumps(add_doc, indent=2))
+    logging.debug('fileinfo %s ' %fileinfo.get_result() )
+    document_id = add_doc['document_id']
+    logging.debug('document_id %s ' %document_id )
+
+    doc_info = discovery.get_document_status(ENVIRONMENT_ID, COLLECTION_ID, document_id).get_result()
+    logging.debug(json.dumps(doc_info, indent=2))
+    return(json.dumps(doc_info, indent=2))
+
+def handle_files(real_time_message):
+    logging.debug('handle_files: started ')
+    name = multiprocessing.current_process().name
+    message_data = real_time_message[0]
+    url_private_download  = real_time_message[0].get("files")[0]['url_private_download']
+    logging.debug('handle_files: url_private_download  %s' %url_private_download )
+
+    # Method for responding to private messages and for mentions in chat
+    # Extract needed variables from the slack RTM object
+    message_channel = message_data.get('channel')
+    message_ts = message_data.get('ts')
+    message_team = message_data.get('team')
+    message_text = message_data.get('text')
+    message_user = message_data.get('user')
+    message_files = message_data.get('files')
+    logging.debug('handle_files: message_files id  %s' %message_files[0].get('id') )
+    message_name = message_data.get('name')
+    logging.debug('handle_files: message_files url_private  %s' %message_files[0].get('url_private') )
+    logging.debug('handle_files: message_files name  %s' %message_files[0].get('name') )
+    text_found = read_pdf( message_files[0].get('url_private'), message_files[0].get('name')  )
+
+    # Don't do anything if the user is this bot
+    if BOT_USER_ID == message_user:
+        return None
+
+    # Determine the type of Channel the message is coming in on
+    if message_channel[0] == 'C':
+        message_location = Channel.PUBLIC
+    elif message_channel[0] == 'D':
+        message_location = Channel.DIRECT_MESSAGE
+    elif message_channel[0] == 'G':
+        message_location = Channel.PRIVATE
+    else:
+        logging.warning('New or Unknown Slack Channel Type! Defaulting to PUBLIC.')
+        message_location = Channel.PUBLIC
+
+    logging.debug('Channel Type: ' + str(message_location))
+
+    # If not a DM Check to see if bot was mentioned
+    if message_location is not Channel.DIRECT_MESSAGE:
+        if AT_BOT in message_text:
+            logging.debug('message_channel %s'  %message_channel)
+            logging.debug('message_user %s'  %message_user)
+            logging.debug('message_file %s'  %message_file)
+            logging.debug('message_name %s'  %message_name)
+            logging.debug('Cleaned Text To: ' + str(message_text))
+        else:
+            # Don't Handle Public Messages without Bot Mention
+            return None
+
+    logging.debug('Recieved File Data:')
+    # Send the text response to slack
+    response_info = str(message_user) + ' ' + str(message_file) + ' ' + str(message_name)  + ' ' + str(message_text)
+    logging.debug('Recieved File Data: %s ' %response_info)
+    message_response = slack_client.api_call(
+        "chat.postMessage",
+        channel=message_channel,
+        link_names=1,
+        text=text_found,
+        as_user=True
+    )
+
+    # Process file metadata and then pass it in to Watson Assistant Solution with CONTEXT
+
+
+    # Build WA converse POST request
+    url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse?api_key=" + settings.WA_API_KEY
+    headers = {'Content-Type': 'application/json'}
+
+    # Build the JSON body to send to WA converse endpoint
+    data = dict()
+
+    # Get slack userid and hash it for security
+    hashed_user = hashlib.sha224(message_user.encode('utf-8')).hexdigest()
+
+    # Set Context Template from context.json file
+    context = settings.CONTEXT
+
+    # Inject relevant data into context
+    data['text'] = message_text
+    data['language'] = settings.WA_LANGUAGE
+    data['userID'] = hashed_user
+    data['deviceType'] = settings.WA_DEVICE_TYPE
+    data['clientID'] = settings.WA_CLIENT_ID
+    data['additionalInformation'] = {"context": context}
+
+    data = json.dumps(data)
+    logging.debug("Data: \n" + str(data))
+
+    response = requests.post(url, data=data, headers=headers)
+    logging.debug(str(response))
+
+    logging.debug('WA Response: \n' + str(response) + '    ')
+    logging.debug('    ' + str(response.content))
+
+    response_content = json.loads(response.content)
+
+    return None
 
 def handle_messages(real_time_message):
     name = multiprocessing.current_process().name
@@ -129,9 +286,9 @@ def handle_messages(real_time_message):
         logging.warning("Response Content: \n" + str(response_content))
 
         # Send the text response to slack
-        slack_client.api_call("chat.postMessage", token=slack_token, channel=message_channel,
+        slack_client.api_call("chat.postMessage", channel=message_channel,
             text="Sorry I appear to be having connectivity issues. :cry: \n\nPlease try again in a few minutes.",
-            as_user='true:'
+            as_user='true'
         )
 
         # Post Analytics to Service
@@ -207,16 +364,20 @@ def handle_messages(real_time_message):
     logging.debug('Responded With: ' + str(text))
 
     # Send the text response to slack
+    logging.debug('Response To Slack API Message Post: slack_token %s ' %slack_token )
+    logging.debug('Response To Slack API Message Post: message_channel %s' %message_channel )
+    logging.debug('Response To Slack API Message Post: text %s' %text )
+
+    # Send the text response to slack
     message_response = slack_client.api_call(
         "chat.postMessage",
-        token=slack_token,
         channel=message_channel,
-        link_names=1,
         text=text,
-        as_user='true:'
+        as_user=True,
+        link_names=1
     )
 
-    logging.debug('Response To Slack API Message Post:\n    ' + str(message_response))
+    #logging.debug('Response To Slack API Message Post:\n    ' + str(message_response))
 
     response_post_ts = message_response.get('ts')
     response_post_channel = message_response.get('channel')
@@ -226,7 +387,7 @@ def handle_messages(real_time_message):
     # Add Reactions for feedback
     reaction_response = slack_client.api_call(
         "reactions.add",
-        token=slack_token,
+
         channel=response_post_channel,
         name='+1::skin-tone-2',
         timestamp=response_post_ts
@@ -236,7 +397,7 @@ def handle_messages(real_time_message):
 
     reaction_response = slack_client.api_call(
         "reactions.add",
-        token=slack_token,
+
         channel=response_post_channel,
         name='-1::skin-tone-2',
         timestamp=response_post_ts
@@ -250,12 +411,12 @@ def handle_messages(real_time_message):
     if int(card_data_length) >= int(MAX_CARD_CHARACTERS):
         slack_client.api_call(
             "files.upload",
-            token=slack_token,
+
             channels=message_channel,
             content=card_data,
             filetype='javascript',
             filename='Card Data.js',
-            as_user='true:'
+            as_user=''
         )
 
     # Cache Message Pointers
@@ -415,7 +576,7 @@ def handle_reaction(rtm_event):
                     channel=channel,
                     text="Sorry I wasn't helpful, I'll try to learn from this for the future.",
                     user=rtm_event.get('user'),
-                    as_user='true:'
+                    as_user='true'
                 )
 
             elif '+1' in reaction:
@@ -432,7 +593,7 @@ def handle_reaction(rtm_event):
                     channel=channel,
                     text="Thanks for the feedback! :grinning:",
                     user=rtm_event.get('user'),
-                    as_user='true:'
+                    as_user='true'
                 )
 
             logging.debug('Message Responded To: \n    ' + str(message_responded_to))
@@ -495,14 +656,21 @@ if __name__ == "__main__":
                     process = multiprocessing.Process(name='Reaction Worker', target=handle_reaction, args=(real_time_message[0],))
                     jobs.append(process)
                     process.start()
-                    # handle_reaction(real_time_message[0])
 
                 elif message_type == 'message':
                     logging.debug('Message Event:\n    ' + str(real_time_message))
                     process = multiprocessing.Process(name='Message Worker', target=handle_messages, args=(real_time_message,))
                     jobs.append(process)
                     process.start()
-                    # handle_messages(real_time_message)
+
+                    logging.debug('check if there are files %s ' %real_time_message[0].get("files")    )
+
+                    if real_time_message[0].get("files"):
+                        logging.debug('File Event:\n    ' + str(real_time_message))
+                        process = multiprocessing.Process(name='Message Worker', target=handle_files, args=(real_time_message,))
+                        jobs.append(process)
+                        process.start()
+                        # handle_messages(real_time_message)
 
                 # Clean up completed worker threads
                 cleaned_jobs = []
@@ -519,4 +687,3 @@ if __name__ == "__main__":
 
     else:
         logging.debug("Connection failed. Invalid Slack token or bot ID?")
-

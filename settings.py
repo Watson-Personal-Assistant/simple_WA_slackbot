@@ -115,6 +115,13 @@ try:
     # Bot Configuration Settings
     MAX_CARD_CHARACTERS = os.environ.get("MAX_CARD_CHARACTERS")
 
+    # Discovery Service Configuration Settings
+    DS_USERNAME = os.environ.get("DS_USERNAME")
+    DS_PASSWORD = os.environ.get("DS_PASSWORD")
+    COLLECTION_ID = os.environ.get("COLLECTION_ID")
+    CONFIGURATION_ID = os.environ.get("CONFIGURATION_ID")
+    ENVIRONMENT_ID = os.environ.get("ENVIRONMENT_ID")
+
     print("Environment Variables Loaded Successfully")
 
 except Exception as ex:
