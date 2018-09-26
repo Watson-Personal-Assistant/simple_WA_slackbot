@@ -64,8 +64,8 @@ class DS ():
         #doc_query='text:'+ search_term
         #doc_query='document_id:'+ search_term
         #logging.debug('doc_query %s ' %doc_query)
-        query_results = self.discovery.query(environment_id=ENVIRONMENT_ID, collection_id=COLLECTION_ID, query=doc_query )
-        logging.debug(json.dumps(query_results, indent=2))
+        query_results = self.discovery.query(environment_id=ENVIRONMENT_ID, collection_id=COLLECTION_ID, query=doc_query ).get_result()
+        #logging.debug(json.dumps(query_results, indent=2))
         logging.debug('matching results %s ' %query_results['matching_results'] )
         if query_results['matching_results'] > 0:
             # Get query_results details
@@ -100,7 +100,8 @@ class DS ():
                 logging.debug('Found matching filename  %s' %query_results['results'][0]['extracted_metadata']["filename"] )
                 logging.debug('Found matching author  %s' %query_results['results'][0]['extracted_metadata']["author"])
             elif doc_type == None :
-                doc_type ="Unknown"
+                logging.debug('doc_type is unknown')
+                doc_type ="unknown"
 
         else:
             logging.warning('Document was not found YYYYYYYYYYY.')
@@ -122,14 +123,14 @@ class DS ():
           }
         }
         '''
-        return()
+        return(doc_type)
 
-    def read_pdf(self, doc_url, doc_name, slack_token):
-
+    def read_file_from_slack(self, doc_url, doc_name, slack_token):
+        doc_type = "uknown"
         # Get the pdf from Slack doc_url which is the private URL
         r = requests.get(doc_url, headers={'Authorization': 'Bearer {}'.format(slack_token) })
-        logging.debug("read_pdf headers %s " %r.headers )
-        logging.debug("read_pdf content-type %s " %r.headers['content-type'] )
+        logging.debug("read_file_from_slack headers %s " %r.headers )
+        logging.debug("read_file_from_slack content-type %s " %r.headers['content-type'] )
 
         # Save the file in the cloud temporarily
         with open(doc_name, 'wb' ) as f:
@@ -140,7 +141,7 @@ class DS ():
 
         # Put pdf document in Discovery instance - works but testing other methods
         with open(filepath, 'rb') as fileinfo:
-            add_doc = self.discovery.add_document(ENVIRONMENT_ID, COLLECTION_ID, file=fileinfo)
+            add_doc = self.discovery.add_document(ENVIRONMENT_ID, COLLECTION_ID, file=fileinfo).get_result()
 
         logging.debug('Add Document metadata ------')
         logging.debug(add_doc)
@@ -149,8 +150,12 @@ class DS ():
         #    logging.debug('Key %s' %key )
         #    logging.debug('Value %s' %add_doc.get(key) )
         # Get document details
-        doc_info = self.discovery.get_document_status(ENVIRONMENT_ID, COLLECTION_ID, add_doc['document_id'])
-        #data_dic = json.loads(doc_info)[0]
+        logging.debug('add_doc before get_document_status %s' %add_doc['document_id'])
+        # Get document status details
+        doc_info = self.discovery.get_document_status(ENVIRONMENT_ID, COLLECTION_ID, add_doc['document_id'] ).get_result()
+        logging.debug(json.dumps(doc_info, indent=2))
+        #doc_dic =  dict()
+        #doc_dic.appen( json.loads( doc_info)[0] ) )
         '''
         JSON
         {
@@ -167,15 +172,14 @@ class DS ():
             "headers": {
         '''
         for key in doc_info.keys():
-            logging.debug( 'doc_info  ---------------------------- ')
+            logging.debug( 'doc dic keys info  ---------------------------- ')
             logging.debug('Key %s' %key )
             logging.debug('Value %s' %doc_info.get(key) )
-        # Get document details
-        doc_info = self.discovery.get_document_status(ENVIRONMENT_ID, COLLECTION_ID, add_doc['document_id'])
         time_waiting = 0
         status = 'not done'
+        doc_type = 'unknown'
         while time_waiting < 15 and status != 'done' :
-            if doc_info['status'] == "available":
+            if doc_info.get('status') == "available":
                 # Find document that was just uploaded from the user and see if it is ready for processing .
                 status = 'done'
                 logging.debug('Document is successfully ingested and indexed with no warnings Here is document ID')
@@ -197,23 +201,60 @@ class DS ():
                 logging.debug(  "filename %s" %doc_info['filename'])
                 logging.debug(  "file_type %s " %doc_info['file_type'])
                 logging.debug(  "sha1%s " %doc_info['sha1'])
-                if doc_info['notices'] :
+                if doc_info.get('notices') :
                     logging.debug(  "notice id %s" %doc_info['notices'][0]['notice_id'])
                     logging.debug(    "severity %s" %doc_info['notices'][0]['severity'])
                     logging.debug(     "step %s"  %doc_info['notices'][0]['step'])
                     logging.debug(     "description %s"  %doc_info['notices'][0]['description'] )
                     logging.debug(     "document_id %s"    %doc_info['notices'][0]['document_id'])
-                self.determine_doctype(doc_info)
+                doc_type = self.determine_doctype(doc_info)
             else:
                 logging.warning('Document was not ready yet XXXXXXXXXXX. %s ' %doc_info['status'])
                 time_waiting = time_waiting + 1.5
                 # Get document details
-                doc_info = self.discovery.get_document_status(ENVIRONMENT_ID, COLLECTION_ID, add_doc['document_id'])
+                doc_info = self.discovery.get_document_status(ENVIRONMENT_ID, COLLECTION_ID, add_doc['document_id']).get_result()
                 time.sleep(8)
-        return
+        return "document is " + doc_type
 
-    def handle_files(real_time_message):
+    def message_wassol(self, message_text, message_user):
+        # Process file metadata and then pass it in to Watson Assistant Solution with CONTEXT
+        # Build WA converse POST request
+        url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse?api_key=" + settings.WA_API_KEY
+        headers = {'Content-Type': 'application/json'}
+
+        # Build the JSON body to send to WA converse endpoint
+        data = dict()
+
+        # Get slack userid and hash it for security
+        hashed_user = hashlib.sha224(message_user.encode('utf-8')).hexdigest()
+
+        # Set Context Template from context.json file
+        context = settings.CONTEXT
+
+        # Inject relevant data into context
+        data['text'] = message_text
+        data['language'] = settings.WA_LANGUAGE
+        data['userID'] = hashed_user
+        data['deviceType'] = settings.WA_DEVICE_TYPE
+        data['clientID'] = settings.WA_CLIENT_ID
+        data['additionalInformation'] = {"context": context}
+
+        data = json.dumps(data)
+        logging.debug("Data: \n" + str(data))
+
+        response = requests.post(url, data=data, headers=headers)
+        logging.debug(str(response))
+
+        logging.debug('WA Response: \n' + str(response) + '    ')
+        logging.debug('    ' + str(response.content))
+
+        response_content = json.loads(response.content)
+
+        return None
+
+    def handle_files(self, real_time_message):
         logging.debug('handle_files: started ')
+        logging.debug('check if there are files %s ' %real_time_message[0].get("files")    )
         name = multiprocessing.current_process().name
         message_data = real_time_message[0]
         url_private_download  = real_time_message[0].get("files")[0]['url_private_download']
@@ -226,15 +267,18 @@ class DS ():
         message_team = message_data.get('team')
         message_text = message_data.get('text')
         message_user = message_data.get('user')
+        logging.debug('handle_files: message_user   %s' %message_user)
         message_files = message_data.get('files')
         logging.debug('handle_files: message_files id  %s' %message_files[0].get('id') )
         message_name = message_data.get('name')
         logging.debug('handle_files: message_files url_private  %s' %message_files[0].get('url_private') )
         logging.debug('handle_files: message_files name  %s' %message_files[0].get('name') )
-        texts = read_pdf( message_files[0].get('url_private'), message_files[0].get('name')  )
-        for text in texts:
-            logging.debug(' text.description %s ' %text.description)
-        return text.description
+        #intent_text = self.read_file_from_slack( message_files[0].get('url_private'), message_files[0].get('name'), settings.SLACK_API_TOKEN  )
+        # for testing
+        intent_text = "Insurance Claim Form"
+        logging.debug(' intent_text %s ' %intent_text)
+        self.message_wassol(intent_text, message_user)
+        return
 
 if __name__ == "__main__":
     logging.debug("Done")
@@ -250,5 +294,5 @@ if __name__ == "__main__":
     doc_url ='https://files.slack.com/files-pri/TCV7G5HCL-FD0RF552B/claimformibm.pdf'
     doc_name = 'claimformibm.pdf'
     ds_test = DS()
-    ds_test.read_pdf(doc_url, doc_name, slack_token)
-    logging.debug("Done")
+    file_type = ds_test.read_file_from_slack(doc_url, doc_name, slack_token)
+    logging.debug("Done %s" %file_type)

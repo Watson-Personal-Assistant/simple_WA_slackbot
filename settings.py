@@ -121,6 +121,7 @@ try:
     COLLECTION_ID = os.environ.get("COLLECTION_ID")
     CONFIGURATION_ID = os.environ.get("CONFIGURATION_ID")
     ENVIRONMENT_ID = os.environ.get("ENVIRONMENT_ID")
+    GOOGLE_APPLICATION_CREDENTIALS=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
 
     print("Environment Variables Loaded Successfully")
 

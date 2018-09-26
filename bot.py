@@ -12,17 +12,9 @@ from watson_developer_cloud import DiscoveryV1
 from watson_developer_cloud import VisualRecognitionV3
 import requests
 import os
+import io
 from slackclient import SlackClient
-
-# ====================
-# Discovery service settings
-# ====================
-COLLECTION_ID = settings.COLLECTION_ID
-CONFIGURATION_ID = settings.CONFIGURATION_ID
-ENVIRONMENT_ID = settings.ENVIRONMENT_ID
-DS_USERNAME = settings.DS_USERNAME
-DS_PASSWORD = settings.DS_PASSWORD
-
+from doc_serv import DS
 # ====================
 # SLACK CLIENT CONFIG
 # ====================
@@ -56,73 +48,18 @@ class Channel(Enum):
 MAX_CARD_CHARACTERS = settings.MAX_CARD_CHARACTERS
 MAX_MESSAGE_CACHE = settings.MAX_MESSAGE_CACHE
 
-def read_img_file(doc_url):
-    # creating a Visual Recognition  Service instance
-    instance = VisualRecognitionV3(api_key='paste your api _key here', version='2016-05-20')
-
-    # select an image (local or url) with text in it. Recognizing text:
-    img = instance.recognize_text(images_url=doc_url)
-    text_read = img['images'][0]['text']
-    logging.debug( 'Read text %s ' %text_read  )
-    return(text_read)
-
-def read_pdf(doc_url, doc_name):
-
-    # Get the pdf from Slack
-    #r = requests.get(doc_url, file_name) # create HTTP response object
-    r = requests.get(doc_url, headers={'Authorization': 'Bearer {}'.format(slack_token) })
-    # logging.debug("read_pdf content %s " %r.content )
-    # send a HTTP request to the server and save
-    # the HTTP response in a response object called r
-    # save the file python_logo.png
-    with open(doc_name, 'wb' ) as f:
-        f.write(r.content)
-
-    #logging.debug("read_pdf text %s " %r.text )
-    logging.debug("read_pdf headers %s " %r.headers )
-    logging.debug("read_pdf content-type %s " %r.headers['content-type'] )
-
-    # creating a Discovery instance
-    logging.debug( 'Adding Doc to Discovery Service' )
-    discovery = DiscoveryV1(
-      username=DS_USERNAME,
-      password=DS_PASSWORD,
-      version="2017-10-16"
-    )
-
-    # Put pdf document in Discovery instance
-    with open(os.path.join(os.getcwd(), '.', doc_name )) as fileinfo:
-        add_doc = discovery.add_document(ENVIRONMENT_ID, COLLECTION_ID, file_info=fileinfo)
-
-    logging.debug(json.dumps(add_doc, indent=2))
-    logging.debug('fileinfo %s ' %fileinfo.get_result() )
-    document_id = add_doc['document_id']
-    logging.debug('document_id %s ' %document_id )
-
-    doc_info = discovery.get_document_status(ENVIRONMENT_ID, COLLECTION_ID, document_id).get_result()
-    logging.debug(json.dumps(doc_info, indent=2))
-    return(json.dumps(doc_info, indent=2))
-
-def handle_files(real_time_message):
-    logging.debug('handle_files: started ')
+def handle_file_response(real_time_message, text):
     name = multiprocessing.current_process().name
+
     message_data = real_time_message[0]
-    url_private_download  = real_time_message[0].get("files")[0]['url_private_download']
-    logging.debug('handle_files: url_private_download  %s' %url_private_download )
 
     # Method for responding to private messages and for mentions in chat
     # Extract needed variables from the slack RTM object
     message_channel = message_data.get('channel')
+    message_text = text
     message_ts = message_data.get('ts')
     message_team = message_data.get('team')
-    message_text = message_data.get('text')
     message_user = message_data.get('user')
-    message_files = message_data.get('files')
-    logging.debug('handle_files: message_files id  %s' %message_files[0].get('id') )
-    message_name = message_data.get('name')
-    logging.debug('handle_files: message_files url_private  %s' %message_files[0].get('url_private') )
-    logging.debug('handle_files: message_files name  %s' %message_files[0].get('name') )
-    text_found = read_pdf( message_files[0].get('url_private'), message_files[0].get('name')  )
 
     # Don't do anything if the user is this bot
     if BOT_USER_ID == message_user:
@@ -155,7 +92,7 @@ def handle_files(real_time_message):
 
     logging.debug('Recieved File Data:')
     # Send the text response to slack
-    response_info = str(message_user) + ' ' + str(message_file) + ' ' + str(message_name)  + ' ' + str(message_text)
+    response_info = str(text_found)
     logging.debug('Recieved File Data: %s ' %response_info)
     message_response = slack_client.api_call(
         "chat.postMessage",
@@ -201,6 +138,32 @@ def handle_files(real_time_message):
     response_content = json.loads(response.content)
 
     return None
+
+def handle_files(real_time_message):
+    # Create a Discover Service instance to handle files.
+    ds = DS()
+    wa_response = ds.handle_files(real_time_message)
+    for key in wa_response.keys():
+        logging.debug('doc dic keys info  ---------------------------- ')
+        logging.debug('Key %s' %key )
+        logging.debug('Value %s' %wa_response.get(key) )
+    #logging.debug('doc_url %s ' %wa_response)
+    #logging.debug('doc_name  % ' %doc_name )
+
+    '''
+    # Read the file and publish it to Discover Service
+    intent_text = ds.read_file_from_slack( doc_url, doc_name, slack_token)
+    logging.debug(' intent_text %s ' %intent_text)
+
+    # Provide file meta data to Watson Assistant Solutions to process it.
+    wa_response_text = self.message_wassol(intent_text)
+    logging.debug(' wa_response_text %s ' %wa_response_text)
+    '''
+    # Tell the user what Watson Assistant thinks the file is an what other information is needed.
+    handle_file_response(real_time_message, wa_response_text)
+    logging.debug("Done")
+
+    return
 
 def handle_messages(real_time_message):
     name = multiprocessing.current_process().name
@@ -663,14 +626,11 @@ if __name__ == "__main__":
                     jobs.append(process)
                     process.start()
 
-                    logging.debug('check if there are files %s ' %real_time_message[0].get("files")    )
-
                     if real_time_message[0].get("files"):
                         logging.debug('File Event:\n    ' + str(real_time_message))
                         process = multiprocessing.Process(name='Message Worker', target=handle_files, args=(real_time_message,))
                         jobs.append(process)
                         process.start()
-                        # handle_messages(real_time_message)
 
                 # Clean up completed worker threads
                 cleaned_jobs = []
