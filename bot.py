@@ -17,7 +17,7 @@ from slackclient import SlackClient
 slack_token = settings.SLACK_API_TOKEN
 
 # Instantiate Slack client
-slack_client = SlackClient(slack_token)
+slack_client = SlackClient(token=slack_token)
 
 # Bot's ID as an environment variable
 BOT_NAME = settings.BOT_NAME
@@ -75,6 +75,8 @@ def handle_messages(real_time_message):
 
     logging.debug('Channel Type: ' + str(message_location))
 
+    logging.debug('At Bot: ' + str(AT_BOT))
+
     # If not a DM Check to see if bot was mentioned
     if message_location is not Channel.DIRECT_MESSAGE:
         if AT_BOT in message_text:
@@ -129,7 +131,7 @@ def handle_messages(real_time_message):
         logging.warning("Response Content: \n" + str(response_content))
 
         # Send the text response to slack
-        slack_client.api_call("chat.postMessage", token=slack_token, channel=message_channel,
+        slack_client.api_call("chat.postMessage", channel=message_channel,
             text="Sorry I appear to be having connectivity issues. :cry: \n\nPlease try again in a few minutes.",
             as_user='true:'
         )
@@ -209,7 +211,6 @@ def handle_messages(real_time_message):
     # Send the text response to slack
     message_response = slack_client.api_call(
         "chat.postMessage",
-        token=slack_token,
         channel=message_channel,
         link_names=1,
         text=text,
@@ -226,7 +227,6 @@ def handle_messages(real_time_message):
     # Add Reactions for feedback
     reaction_response = slack_client.api_call(
         "reactions.add",
-        token=slack_token,
         channel=response_post_channel,
         name='+1::skin-tone-2',
         timestamp=response_post_ts
@@ -236,7 +236,6 @@ def handle_messages(real_time_message):
 
     reaction_response = slack_client.api_call(
         "reactions.add",
-        token=slack_token,
         channel=response_post_channel,
         name='-1::skin-tone-2',
         timestamp=response_post_ts
@@ -250,7 +249,6 @@ def handle_messages(real_time_message):
     if int(card_data_length) >= int(MAX_CARD_CHARACTERS):
         slack_client.api_call(
             "files.upload",
-            token=slack_token,
             channels=message_channel,
             content=card_data,
             filetype='javascript',

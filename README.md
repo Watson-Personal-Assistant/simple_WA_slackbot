@@ -4,7 +4,7 @@
 ### Description
 A Python Application for a slackbot that routes text requests and gets responses from Watson Assistant Solutions.
 
-[![Build Status](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot.svg?token=zZTqm68ChrVG6ms39mnF&branch=master)](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot) [![License](https://img.shields.io/badge/license-APACHE2-blue.svg)]() [![Python](https://img.shields.io/badge/Python-3.6.2-yellow.svg)]() [![Version](https://img.shields.io/badge/Version-3.1.3-green.svg)]()
+[![Build Status](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot.svg?token=zZTqm68ChrVG6ms39mnF&branch=master)](https://travis.ibm.com/ConsumerIoT/simple_WPA_slackbot) [![License](https://img.shields.io/badge/license-APACHE2-blue.svg)]() [![Python](https://img.shields.io/badge/Python-3.6.4-yellow.svg)]() [![Version](https://img.shields.io/badge/Version-3.1.3-green.svg)]()
 
 ---
 
