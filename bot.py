@@ -143,17 +143,25 @@ def handle_messages(real_time_message):
         return None
 
     # Extract Data from WA Response
-    user_intent = response_content.get('skill').get('intents')[0].get('intent')
+    try:
+        user_intent = response_content.get('skill').get('intents')[0].get('intent')
+        intent_confidence = response_content.get('skill').get('intents')[0].get('confidence')
+        skill = response_content.get('skill').get('name')
+    except AttributeError:
+        user_intent = "NO_INTENT_RECEIVED"
+        intent_confidence = '0'
+        skill = "NO_SKILL"
+
     logging.debug('User Intent: ' + str(user_intent))
-
-    intent_confidence = response_content.get('skill').get('intents')[0].get('confidence')
     logging.debug('Intent Confidence: ' + str(intent_confidence))
-
-    entities = response_content.get('skill').get('entities')
-    logging.debug('Entities: ' + str(entities))
-
-    skill = response_content.get('skill').get('name')
     logging.debug('Skill: ' + str(skill))
+
+    try:
+        entities = response_content.get('skill').get('entities')
+    except AttributeError:
+        entities = []
+
+    logging.debug('Entities: ' + str(entities))
 
     # Check for WA response data
     try:
