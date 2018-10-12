@@ -104,6 +104,8 @@ try:
     WA_API_KEY = os.environ.get("WA_API_KEY")
     WA_LANGUAGE = os.environ.get("WA_LANGUAGE")
     WA_DEVICE_TYPE = os.environ.get("WA_DEVICE_TYPE")
+    WA_TENANT_ID = os.environ.get("WA_TENANT_ID")
+    IAM_API_KEY = os.environ.get("IAM_API_KEY")
 
     if os.environ.get("WA_CLIENT_ID"):
         WA_CLIENT_ID = os.environ.get("WA_DEVICE_TYPE")
