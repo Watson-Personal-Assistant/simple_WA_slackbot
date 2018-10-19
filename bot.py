@@ -96,18 +96,27 @@ def handle_messages(real_time_message):
     message_pointer = (message_ts, message_channel)
     logging.debug('Message Pointer: ' + str(message_pointer))
 
-    auth = 'Bearer '+ str(iam_token.get_access_token())
-    logging.debug('Auth: ' + auth)
+    if settings.AUTH_TYPE == 'IAM':
+        auth = 'Bearer '+ str(iam_token.get_access_token())
+        logging.debug('Auth: ' + auth)
 
 
-    # Build WA converse POST request
-    url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse"
-    headers = {
-        'Content-Type': 'application/json',
-        'accept': 'application/json',
-        'Authorization': auth,
-        'tenantid': settings.WA_TENANT_ID
-    }
+        # Build WA converse POST request
+        url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse"
+        headers = {
+            'Content-Type': 'application/json',
+            'accept': 'application/json',
+            'Authorization': auth,
+            'tenantid': settings.WA_TENANT_ID
+        }
+    elif settings.AUTH_TYPE == 'API_KEY':
+        url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse?api_key=" + settings.WA_API_KEY
+        headers = {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    else:
+        raise ValueError('AUTH_TYPE was not \'IAM\' or \'API_KEY\'')
 
     # Build the JSON body to send to WA converse endpoint
     data = dict()
@@ -541,7 +550,8 @@ def init_oauth():
 
 if __name__ == "__main__":
 
-    init_oauth()
+    if settings.AUTH_TYPE == 'IAM':
+        init_oauth()
 
     if slack_client.rtm_connect():
         logging.info("Bot connected and running!")

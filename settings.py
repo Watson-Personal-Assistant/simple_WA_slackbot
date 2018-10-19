@@ -93,6 +93,36 @@ if ANALYTICS_ENABLED:
 # =======================================
 # Slack & Watson Assistant Credentials
 # =======================================
+
+# WA Authentication
+try:
+    AUTH_TYPE = os.environ.get("AUTH_TYPE")
+    if AUTH_TYPE == "IAM":
+        try:
+            WA_TENANT_ID = os.environ.get("WA_TENANT_ID")
+            IAM_API_KEY = os.environ.get("IAM_API_KEY")
+        except Exception as ex:
+            logging.error("ERROR: Loading WA_TENANT_ID or IAM_API_KEY")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            logging.error(message)
+    elif AUTH_TYPE == "API_KEY":
+        try:
+            WA_API_KEY = os.environ.get("WA_API_KEY")
+            # logging.debug("WA_API_KEY: " + WA_API_KEY)
+        except Exception as ex:
+            logging.error("ERROR: Loading WA_API_KEY")
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            logging.error(message)
+    else:
+        raise ValueError('AUTH_TYPE was not \'IAM\' or \'API_KEY\'')
+except Exception as ex:
+    logging.error("ERROR: Missing Required Authentication Type (AUTH_TYPE) environment variable. Use Either: IAM or API_KEY as values.")
+    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+    message = template.format(type(ex).__name__, ex.args)
+    logging.error(message)
+
 try:
     # Slack Credentials
     SLACK_API_TOKEN = os.environ.get("SLACK_API_TOKEN")
@@ -101,11 +131,9 @@ try:
     # WA Credentials
     WA_URL = os.environ.get("WA_URL")
     WA_SKILLSET = os.environ.get("WA_SKILLSET")
-    WA_API_KEY = os.environ.get("WA_API_KEY")
     WA_LANGUAGE = os.environ.get("WA_LANGUAGE")
     WA_DEVICE_TYPE = os.environ.get("WA_DEVICE_TYPE")
-    WA_TENANT_ID = os.environ.get("WA_TENANT_ID")
-    IAM_API_KEY = os.environ.get("IAM_API_KEY")
+
 
     if os.environ.get("WA_CLIENT_ID"):
         WA_CLIENT_ID = os.environ.get("WA_DEVICE_TYPE")

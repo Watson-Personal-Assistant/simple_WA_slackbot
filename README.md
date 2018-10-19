@@ -28,6 +28,20 @@ A Python Application for a slackbot that routes text requests and gets responses
 7. You will use these variables when creating your .env file as instructed in the below steps
 
 
+### Getting Your IAM Key
+
+1. Go to [https://console.ng.bluemix.net/](https://console.ng.bluemix.net/) and log in.
+2. In the nav bar, select Manage > Security > Platform API keys
+![nav-bar-image](img/iam-nav-image.png)
+3. Click on the **`Create +`** button
+4. Give it a name and description, something like `watson-slackbot-tocken`
+5. When your API key is created click the `show` button
+6. Save the **IAM API Token**
+7. You will use this variables when creating your .env file as instructed in the below steps
+
+**Note:** You can also obtain an IAM key via the IBM Cloud CLI [documentation here](https://console.bluemix.net/docs/iam/userid_keys.html#userapikey)
+
+
 ### Notes on configuration
 When running the application you'll need to ensure you have your .env file setup in the root folder.  Credential configuration files should be kept private.
 
@@ -60,9 +74,19 @@ BOT_NAME=""
 # WA Credentials
 WA_URL="https://watson-personal-assistant-toolkit.mybluemix.net"
 WA_SKILLSET=""
-WA_API_KEY=""
 WA_LANGUAGE="en-US"
 WA_DEVICE_TYPE="slackbot"
+
+# Authentication "IAM" or "API_KEY" (API_KEY will be depricated)
+AUTH_TYPE="IAM"
+
+#IF IAM AUTH
+WA_TENANT_ID=""
+IAM_API_KEY=""
+
+# IF API_KEY Auth
+WA_API_KEY=""
+
 
 # Bot Configuration - Number of characters before card data is made into a JSON snippit
 MAX_CARD_CHARACTERS=1500
