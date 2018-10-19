@@ -151,7 +151,7 @@ python3 -m unittest discover
 You can run a specific test with a command like below
 
 ```sh
-python3 -m unittest test.test_env_file
+python3 -m unittest test.test_WA_configuration
 ```
 
 ---
