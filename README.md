@@ -100,6 +100,7 @@ For help getting a slack API token if you weren't able to via the initial steps 
 
 **Note:** You can also obtain an IAM key via the IBM Cloud CLI [documentation here](https://console.bluemix.net/docs/iam/userid_keys.html#userapikey)
 
+
 #### Getting Your Watson Assistant Solutions Tenant ID
 
 1. Go to [https://watson-personal-assistant-toolkit.mybluemix.net/](https://watson-personal-assistant-toolkit.mybluemix.net/) and log in.
@@ -107,6 +108,7 @@ For help getting a slack API token if you weren't able to via the initial steps 
 3. Find the `Tenant Name` that matches the instance you would like to connect your slackbot to
 4. Save the `Tenant ID` associated to your .env file
 
+---
 
 ### To Run Locally
 
