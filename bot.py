@@ -7,8 +7,9 @@ import requests
 import settings
 import multiprocessing
 from enum import Enum
-from datetime import datetime
+from iam_auth import IAM_Token
 from slackclient import SlackClient
+from datetime import datetime, timedelta
 
 # ====================
 # SLACK CLIENT CONFIG
@@ -30,6 +31,9 @@ TEAM_ID = TEAM_INFO['id']
 
 # 1 millisecond delay between reading from firehose
 READ_WEBSOCKET_DELAY = 0.001
+
+# Global Var Defined Later in Init
+iam_token = IAM_Token('', '', '')
 
 
 # Create Channel Enum
@@ -75,7 +79,7 @@ def handle_messages(real_time_message):
 
     logging.debug('Channel Type: ' + str(message_location))
 
-    logging.debug('At Bot: ' + str(AT_BOT))
+    # logging.debug('At Bot: ' + str(AT_BOT))
 
     # If not a DM Check to see if bot was mentioned
     if message_location is not Channel.DIRECT_MESSAGE:
@@ -92,9 +96,27 @@ def handle_messages(real_time_message):
     message_pointer = (message_ts, message_channel)
     logging.debug('Message Pointer: ' + str(message_pointer))
 
-    # Build WA converse POST request
-    url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse?api_key=" + settings.WA_API_KEY
-    headers = {'Content-Type': 'application/json'}
+    if settings.AUTH_TYPE == 'IAM':
+        auth = 'Bearer '+ str(iam_token.get_access_token())
+        logging.debug('Auth: ' + auth)
+
+
+        # Build WA converse POST request
+        url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse"
+        headers = {
+            'Content-Type': 'application/json',
+            'accept': 'application/json',
+            'Authorization': auth,
+            'tenantid': settings.WA_TENANT_ID
+        }
+    elif settings.AUTH_TYPE == 'API_KEY':
+        url = settings.WA_URL + "/v2/api/skillSets/" + settings.WA_SKILLSET + "/converse?api_key=" + settings.WA_API_KEY
+        headers = {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+        }
+    else:
+        raise ValueError('AUTH_TYPE was not \'IAM\' or \'API_KEY\'')
 
     # Build the JSON body to send to WA converse endpoint
     data = dict()
@@ -485,7 +507,52 @@ def cache_response(message_pointer, response_ts):
     return None
 
 
+def init_oauth():
+
+    current_time = datetime.now()
+    logging.debug("Time: " + str(current_time))
+
+    url = "https://iam.bluemix.net/oidc/token"
+
+    querystring = {
+        "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
+        "response_type": "cloud_iam",
+        "apikey": settings.IAM_API_KEY
+    }
+
+    headers = {
+        'content-type': "application/x-www-form-urlencoded"
+    }
+
+    response = requests.request("POST", url, headers=headers, params=querystring)
+    logging.debug("Status Code:" + str(response.status_code))
+    logging.debug("OAuth2:" + response.text)
+
+    json_data = json.loads(response.text)
+    access_token = json_data.get('access_token')
+    refresh_token = json_data.get('refresh_token')
+    expires_in = json_data.get('expires_in')
+    expiration = json_data.get('expiration')
+    expiration_time = current_time + timedelta(seconds=expires_in)
+
+    logging.debug("current_time :" + str(current_time))
+    logging.debug("access_token: " + access_token)
+    logging.debug("refresh_token :" + refresh_token)
+    logging.debug("expires_in :" + str(expires_in))
+    logging.debug("expiration :" + str(expiration))
+    logging.debug("expiration_time :" + str(expiration_time))
+
+    global iam_token
+    iam_token = IAM_Token(access_token, refresh_token, expiration_time)
+
+    return None
+
+
 if __name__ == "__main__":
+
+    if settings.AUTH_TYPE == 'IAM':
+        init_oauth()
+
     if slack_client.rtm_connect():
         logging.info("Bot connected and running!")
 

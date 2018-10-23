@@ -1,4 +1,4 @@
-# WA Simple Slackbot
+# WA Solutions Simple Slackbot
 
 
 ### Description
@@ -16,18 +16,6 @@ A Python Application for a slackbot that routes text requests and gets responses
 * slackclient>=1.2.1
 
 ---
-
-### Getting Your Slack Key
-
-1. Go to [https://YOUR_SLACK.slack.com/apps/manage](https://YOUR_SLACK.slack.com/apps/manage)
-2. In the **Search App Directory** field at the top, type `Bots`
-3. Click on **Bots**
-4. Click on the **Add Configuration** button
-5. Give your bot a unique username (Save this info)
-6. Save the **API Token**
-7. You will use these variables when creating your .env file as instructed in the below steps
-
-
 ### Notes on configuration
 When running the application you'll need to ensure you have your .env file setup in the root folder.  Credential configuration files should be kept private.
 
@@ -60,9 +48,19 @@ BOT_NAME=""
 # WA Credentials
 WA_URL="https://watson-personal-assistant-toolkit.mybluemix.net"
 WA_SKILLSET=""
-WA_API_KEY=""
 WA_LANGUAGE="en-US"
 WA_DEVICE_TYPE="slackbot"
+
+# Authentication "IAM" or "API_KEY" (API_KEY will be depricated)
+AUTH_TYPE="IAM"
+
+#IF IAM AUTH
+WA_TENANT_ID=""
+IAM_API_KEY=""
+
+# IF API_KEY Auth
+WA_API_KEY=""
+
 
 # Bot Configuration - Number of characters before card data is made into a JSON snippit
 MAX_CARD_CHARACTERS=1500
@@ -77,7 +75,40 @@ ANALYTICS_RESPONSE_URL="https://tracker.dashbot.io/track?platform=slack&v=9.8.0-
 MAX_MESSAGE_CACHE=1000
 ```
 
+#### Getting Your Slack Key
+
+1. Go to [https://YOUR_SLACK.slack.com/apps/manage](https://YOUR_SLACK.slack.com/apps/manage)
+2. In the **Search App Directory** field at the top, type `Bots`
+3. Click on **Bots**
+4. Click on the **Add Configuration** button
+5. Give your bot a unique username (Save this info)
+6. Paste and save the **API Token** in your `.env` file
+
+
 For help getting a slack API token if you weren't able to via the initial steps please reference their documentation [here](https://get.slack.help/hc/en-us/articles/215770388-Create-and-regenerate-API-tokens).
+
+
+#### Getting Your IAM Key
+
+1. Go to [https://console.ng.bluemix.net/](https://console.ng.bluemix.net/) and log in.
+2. In the nav bar, select Manage > Security > Platform API keys
+![nav-bar-image](img/iam-nav-image.png)
+3. Click on the **`Create +`** button
+4. Give it a name and description, something like `watson-slackbot-tocken`
+5. When your API key is created click the `show` button
+6. Paste and save the **IAM API Token** in your `.env` file
+
+**Note:** You can also obtain an IAM key via the IBM Cloud CLI [documentation here](https://console.bluemix.net/docs/iam/userid_keys.html#userapikey)
+
+
+#### Getting Your Watson Assistant Solutions Tenant ID
+
+1. Go to [https://watson-personal-assistant-toolkit.mybluemix.net/](https://watson-personal-assistant-toolkit.mybluemix.net/) and log in.
+2. In the nav bar, select Admin > Usage
+3. Find the `Tenant Name` that matches the instance you would like to connect your slackbot to
+4. Save the `Tenant ID` associated to your .env file
+
+---
 
 ### To Run Locally
 
@@ -127,7 +158,7 @@ python3 -m unittest discover
 You can run a specific test with a command like below
 
 ```sh
-python3 -m unittest test.test_env_file
+python3 -m unittest test.test_WA_configuration
 ```
 
 ---
